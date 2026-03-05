@@ -1,68 +1,68 @@
 import java.io.*;
 import java.net.*;
-import java.util.Scanner;
 
 public class ChatServer {
     private static final int PORT = 12345;
 
-    public static void main(String[] args) {
-        System.out.println("Arrancando Servidor de Chat básico en el puerto " + PORT + "...");
-        
+    public static void main(String[] args) throws IOException {
+        System.out.println("Servidor de Chat esperando 2 clientes en el puerto " + PORT + "...");
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Servidor a la espera de un cliente (telnet o ChatClient)...");
-            
-            // Wait for a client to connect
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("¡Cliente conectado desde " + clientSocket.getInetAddress() + "!");
-            
-            // Set up input and output streams
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-            Scanner consoleScanner = new Scanner(System.in);
-            
-            // Output greeting
-            out.println("Bienvenido al Chat Server. Escribe 'EXIT' para cerrar la conexión.");
-            
-            // Thread for reading messages from the client
-            Thread readThread = new Thread(() -> {
-                try {
-                    String clientMessage;
-                    while ((clientMessage = in.readLine()) != null) {
-                        System.out.println("Cliente: " + clientMessage);
-                        if (clientMessage.equalsIgnoreCase("EXIT")) {
-                            System.out.println("El cliente ha solicitado cerrar la conexión (cierre ordenado).");
-                            break;
-                        }
-                    }
-                } catch (IOException e) {
-                    System.out.println("Conexión con el cliente interrumpida.");
-                } finally {
-                    try {
-                        clientSocket.close();
-                        System.out.println("Socket de cliente cerrado.");
-                        System.exit(0); // Optional: close server after client disconnects for a short demo
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+
+            // Esperar al primer cliente
+            Socket client1 = serverSocket.accept();
+            System.out.println("Cliente 1 conectado: " + client1.getInetAddress());
+
+            PrintWriter out1 = new PrintWriter(client1.getOutputStream(), true);
+            out1.println("[Servidor] Conectado. Esperando al segundo cliente...");
+
+            // Esperar al segundo cliente
+            Socket client2 = serverSocket.accept();
+            System.out.println("Cliente 2 conectado: " + client2.getInetAddress());
+
+            PrintWriter out2 = new PrintWriter(client2.getOutputStream(), true);
+
+            // Avisar a ambos
+            out1.println("[Servidor] ¡Chat iniciado! Ya puedes escribir.");
+            out2.println("[Servidor] ¡Conectado! El chat ya está activo.");
+
+            System.out.println("Ambos clientes conectados. Retransmitiendo mensajes...");
+
+            // Hilo: recibe de cliente1, envía a cliente2
+            Thread t1 = new Thread(() -> relay(client1, out2, "Cliente 1"));
+            // Hilo: recibe de cliente2, envía a cliente1
+            Thread t2 = new Thread(() -> relay(client2, out1, "Cliente 2"));
+
+            t1.start();
+            t2.start();
+
+            t1.join();
+            t2.join();
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        System.out.println("Ambos clientes desconectados. Servidor cerrado.");
+    }
+
+    private static void relay(Socket source, PrintWriter destination, String label) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(source.getInputStream()))) {
+            String msg;
+            while ((msg = in.readLine()) != null) {
+                if (msg.equalsIgnoreCase("EXIT")) {
+                    destination.println("[" + label + " se ha desconectado]");
+                    System.out.println(label + " se desconectó.");
+                    break;
                 }
-            });
-            readThread.start();
-            
-            // Main thread for sending messages to the client
-            while (true) {
-                if(consoleScanner.hasNextLine()) {
-                    String serverMessage = consoleScanner.nextLine();
-                    out.println("Servidor: " + serverMessage);
-                    if (serverMessage.equalsIgnoreCase("EXIT")) {
-                        System.out.println("Cerrando el servidor de chat...");
-                        clientSocket.close();
-                        break;
-                    }
-                }
+                System.out.println(label + ": " + msg);
+                destination.println(label + ": " + msg);
             }
-            
         } catch (IOException e) {
-            System.err.println("Error en el servidor: " + e.getMessage());
+            System.out.println("Conexión con " + label + " interrumpida.");
+            destination.println("[" + label + " se ha desconectado inesperadamente]");
+        } finally {
+            try { source.close(); } catch (IOException ignored) {}
         }
     }
 }

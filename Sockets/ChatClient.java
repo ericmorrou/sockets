@@ -7,56 +7,43 @@ public class ChatClient {
     private static final int SERVER_PORT = 12345;
 
     public static void main(String[] args) {
-        System.out.println("Intentando conectar al Servidor de Chat en " + SERVER_ADDRESS + ":" + SERVER_PORT + "...");
+        System.out.println("Conectando al servidor " + SERVER_ADDRESS + ":" + SERVER_PORT + "...");
 
         try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT)) {
-            System.out.println("¡Conectado exitosamente al servidor!");
+            System.out.println("¡Conectado! Esperando al otro cliente...");
 
-            // Set up input and output streams
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            Scanner consoleScanner = new Scanner(System.in);
+            BufferedReader in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter   out  = new PrintWriter(socket.getOutputStream(), true);
+            Scanner       kbd  = new Scanner(System.in);
 
-            // Thread for reading messages from the server
-            Thread readThread = new Thread(() -> {
+            // Hilo daemon: imprime todo lo que manda el servidor
+            Thread reader = new Thread(() -> {
                 try {
-                    String serverMessage;
-                    while ((serverMessage = in.readLine()) != null) {
-                        System.out.println(serverMessage);
-                        // If server closes by sending EXIT format (Servidor: EXIT)
-                        if (serverMessage.equals("Servidor: EXIT") || serverMessage.equals("EXIT")) {
-                            System.out.println("El servidor ha notificado un cierre.");
-                            break;
-                        }
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        System.out.println(line);
                     }
                 } catch (IOException e) {
-                    System.out.println("Conexión con el servidor interrumpida.");
+                    System.out.println("[Conexión cerrada]");
                 } finally {
-                    try {
-                        socket.close();
-                        System.exit(0);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    System.exit(0);
                 }
             });
-            readThread.start();
+            reader.setDaemon(true);
+            reader.start();
 
-            // Main thread for sending messages to the server
-            while (true) {
-                if (consoleScanner.hasNextLine()) {
-                    String clientMessage = consoleScanner.nextLine();
-                    out.println(clientMessage);
-
-                    if (clientMessage.equalsIgnoreCase("EXIT")) {
-                        System.out.println("Cierre ordenado solicitado. Desconectando...");
-                        break;
-                    }
+            // Hilo principal: lee teclado y envía al servidor
+            while (kbd.hasNextLine()) {
+                String msg = kbd.nextLine();
+                out.println(msg);
+                if (msg.equalsIgnoreCase("EXIT")) {
+                    System.out.println("Desconectando...");
+                    break;
                 }
             }
 
         } catch (IOException e) {
-            System.err.println("No se pudo conectar al servidor: " + e.getMessage());
+            System.err.println("No se pudo conectar: " + e.getMessage());
         }
     }
 }
