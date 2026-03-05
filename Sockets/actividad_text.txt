@@ -1,0 +1,21 @@
+What must be delivered 
+Si se detecta que se lee en exceso en 
+lugar de explicar, se considerará no 
+aprobado 
+• Entregar el código usado en Github 
+• Video explicativo 
+o Teoría de red – 1 min 
+o TCP / UDP – 1 min 
+o Implementación del chat básico. Demo y explicación del código en el video – 2 
+min. Se ha de mostrar en clase el jueves 5 de marzo (condición obligatoria 
+para poder evaluar la explicación del video) 
+▪ Soporta múltiples mensajes? 
+▪ ¿Hay cierre ordenado? 
+o Servidor de tickets 
+▪ Solución 1 .  
+• Crea servidor y arráncalo 
+• Usa telnet para ocupar la conexión con el servidor (busca 
+como activar telnet en Windows) 
+• Crea cliente y ejecútalo. Mira como si el telnet ocupa al 
+servidor no se recibe ningún ticket 
+o Inglés 
